@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:," />
+    <title>ORACLE — BTC 15-Minute Auto-Trader for Kalshi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Archivo:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #060807;
+        --bg2: #0a0d0b;
+        --panel: #0c100e;
+        --panel2: #101512;
+        --line: #1e2a22;
+        --line-soft: #16201a;
+        --ink: #e8f0e9;
+        --ink-dim: #9db3a4;
+        --ink-faint: #63756a;
+        --green: #2be07f;
+        --green-dim: #123d26;
+        --red: #ff5468;
+        --red-dim: #3d1620;
+        --amber: #f5b83d;
+        --gold: #f5c94c;
+        --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        --sans: "Archivo", system-ui, -apple-system, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+      a { color: var(--green); }
+      .mono { font-family: var(--mono); }
+
+      /* ---------- top bar ---------- */
+      .topbar {
+        position: sticky; top: 0; z-index: 40;
+        background: rgba(6, 8, 7, 0.94);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid var(--line);
+      }
+      .topbar-in {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; padding: 10px 0;
+      }
+      .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+      .brand-mark {
+        width: 28px; height: 28px; border: 1.5px solid var(--green);
+        display: grid; place-items: center;
+        font-family: var(--mono); font-weight: 800; font-size: 15px; color: var(--green);
+      }
+      .brand-name {
+        font-family: var(--mono); font-weight: 800; font-size: 19px;
+        letter-spacing: 0.22em; color: var(--ink);
+      }
+      .brand-sub {
+        font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em;
+        color: var(--ink-faint); display: block; margin-top: -3px;
+      }
+      .status { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.08em; color: var(--ink-dim); }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(43,224,127,.5); animation: pulse 2.2s infinite; }
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(43,224,127,.45); }
+        70% { box-shadow: 0 0 0 7px rgba(43,224,127,0); }
+        100% { box-shadow: 0 0 0 0 rgba(43,224,127,0); }
+      }
+      .topnav { display: none; gap: 22px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; }
+      .topnav a { color: var(--ink-dim); text-decoration: none; }
+      .topnav a:hover { color: var(--green); }
+      .btn {
+        font-family: var(--mono); font-weight: 700; letter-spacing: 0.06em;
+        text-decoration: none; display: inline-block; text-align: center;
+        border: 1px solid var(--green); color: #04140a; background: var(--green);
+        padding: 9px 16px; font-size: 13px; cursor: pointer;
+      }
+      .btn.ghost { background: transparent; color: var(--green); }
+      .btn.small { padding: 7px 12px; font-size: 12px; }
+      .btn:hover { filter: brightness(1.1); }
+
+      /* ---------- hero ---------- */
+      .hero { padding: 34px 0 10px; }
+      .ticker {
+        border: 1px solid var(--line-soft); background: var(--bg2);
+        font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim);
+        padding: 7px 12px; display: flex; gap: 18px; flex-wrap: wrap;
+        margin-bottom: 26px;
+      }
+      .ticker b { color: var(--ink); font-weight: 600; }
+      .ticker .up { color: var(--green); } .ticker .dn { color: var(--red); }
+      .hero-grid { display: grid; gap: 26px; }
+      .hero h1 {
+        font-size: clamp(30px, 6.4vw, 52px); line-height: 1.04; font-weight: 800;
+        letter-spacing: -0.01em; margin: 0 0 14px;
+      }
+      .hero h1 .g { color: var(--green); }
+      .hero p.lede { color: var(--ink-dim); font-size: 17px; margin: 0 0 22px; max-width: 34em; }
+      .hero-ctas { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+      .hero-note { font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint); letter-spacing: 0.04em; }
+
+      .panel {
+        background: var(--panel); border: 1px solid var(--line);
+      }
+      .panel-head {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 10px 14px; border-bottom: 1px solid var(--line-soft);
+        font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; color: var(--ink-dim);
+      }
+      .panel-head .live { color: var(--red); display: flex; align-items: center; gap: 6px; }
+      .panel-head .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+      .record-body { padding: 16px 14px 12px; }
+      .winrate { font-family: var(--mono); font-size: 56px; font-weight: 800; line-height: 1; color: var(--green); }
+      .winrate small { font-size: 20px; color: var(--ink-dim); font-weight: 500; }
+      .record-sub { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); margin: 6px 0 16px; letter-spacing: 0.05em; }
+      .statgrid { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line-soft); }
+      .stat { padding: 11px 12px; border-bottom: 1px solid var(--line-soft); }
+      .stat:nth-child(odd) { border-right: 1px solid var(--line-soft); }
+      .stat .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.16em; color: var(--ink-faint); display: block; margin-bottom: 3px; }
+      .stat .v { font-family: var(--mono); font-size: 17px; font-weight: 700; }
+      .stat .v.g { color: var(--green); } .stat .v.r { color: var(--red); }
+      .honest {
+        padding: 10px 14px; font-size: 12px; color: var(--ink-faint);
+        border-top: 1px solid var(--line-soft); background: var(--bg2);
+      }
+
+      /* ---------- sections ---------- */
+      section { padding: 42px 0 6px; }
+      .sec-head { margin-bottom: 18px; }
+      .sec-head h2 { font-size: clamp(22px, 4.6vw, 30px); margin: 0 0 6px; font-weight: 800; letter-spacing: -0.01em; }
+      .sec-head p { color: var(--ink-dim); margin: 0; max-width: 42em; }
+      .tag {
+        font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em;
+        color: var(--green); display: block; margin-bottom: 8px;
+      }
+
+      /* ---------- dashboard preview ---------- */
+      .callbanner {
+        display: flex; align-items: center; justify-content: space-between; gap: 14px;
+        padding: 16px; border-bottom: 1px solid var(--line-soft); flex-wrap: wrap;
+      }
+      .call-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; color: var(--ink-faint); display: block; }
+      .call-value { font-family: var(--mono); font-size: clamp(34px, 8vw, 46px); font-weight: 800; line-height: 1.05; color: var(--green); }
+      .call-value .arrow { font-size: 0.72em; }
+      .call-meta { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); text-align: right; }
+      .call-meta b { color: var(--ink); font-size: 15px; }
+      .chartbox { padding: 8px 10px 4px; border-bottom: 1px solid var(--line-soft); }
+      .chart-legend { display: flex; gap: 16px; flex-wrap: wrap; font-family: var(--mono); font-size: 10.5px; color: var(--ink-dim); padding: 6px 4px 10px; }
+      .chart-legend .sw { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--green); vertical-align: middle; margin-right: 5px; }
+      .chart-legend .sw.beat { border-top: 2px dashed var(--amber); }
+      .meters { padding: 14px 16px 16px; display: grid; gap: 13px; }
+      .meter-row { display: grid; grid-template-columns: 118px 1fr 46px; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11.5px; }
+      .meter-row .mk { color: var(--ink-dim); letter-spacing: 0.04em; }
+      .meter-row .mv { text-align: right; font-weight: 700; }
+      .bar { height: 8px; background: #182019; position: relative; overflow: hidden; }
+      .bar i { position: absolute; inset: 0 auto 0 0; background: var(--green); display: block; }
+      .bar i.amb { background: var(--amber); }
+      .dash-note { padding: 10px 14px; font-size: 12px; color: var(--ink-faint); border-top: 1px solid var(--line-soft); background: var(--bg2); }
+
+      /* ---------- streak / sealed / theatrics / trial ---------- */
+      .streak-strip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border: 1px solid var(--line-soft); background: var(--bg2); padding: 10px 12px; margin-bottom: 14px; }
+      .streak-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; color: var(--ink-faint); }
+      .streak-pips { display: flex; gap: 4px; }
+      .streak-pips span { width: 22px; height: 22px; display: grid; place-items: center; font-family: var(--mono); font-size: 11px; font-weight: 800; color: #04140a; background: var(--green); }
+      .streak-pips span:last-child { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px rgba(43,224,127,.45); }
+      .streak-val { font-family: var(--mono); font-size: 13px; font-weight: 800; color: var(--green); letter-spacing: 0.04em; }
+      .streak-sub { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
+      .sealed-pill { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11px; font-weight: 800; letter-spacing: 0.12em; color: #1a1402; background: var(--gold); border: 1px solid var(--gold); padding: 5px 9px; margin-top: 10px; }
+      .sealed-pill::before { content: "◆"; font-size: 10px; }
+      .sealed-pill.is-sealing { animation: sealFlash 0.7s ease 2; }
+      @keyframes sealFlash { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.65); box-shadow: 0 0 0 7px rgba(245,201,76,.22); } }
+      .call-value.is-reveal { animation: callReveal 0.6s cubic-bezier(.2,1.35,.3,1) both; }
+      @keyframes callReveal { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      .theatrics-bar { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 16px 0; }
+      .stage { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; padding: 6px 8px; border: 1px solid var(--line); color: var(--ink-faint); }
+      .stage.on { border-color: var(--green); color: var(--green); background: rgba(43,224,127,.07); }
+      .stage.done { color: var(--ink-dim); border-color: var(--line-soft); }
+      .checkpoints { padding: 4px 16px 16px; border-top: 1px solid var(--line-soft); }
+      .checkpoints h4, .feed-head { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; color: var(--ink-dim); margin: 14px 0 10px; font-weight: 700; }
+      .cp-row { display: grid; grid-template-columns: 86px 1fr 92px; gap: 10px; align-items: center; font-family: var(--mono); font-size: 11.5px; margin-bottom: 9px; }
+      .cp-row .cp-t { color: var(--ink-dim); }
+      .cp-row .cp-w { text-align: right; font-weight: 700; }
+      .cp-bar { height: 8px; background: #182019; position: relative; overflow: hidden; }
+      .cp-bar i { position: absolute; inset: 0 auto 0 0; background: var(--green); display: block; transition: width 0.6s ease; }
+      .cp-row.pending { opacity: 0.42; }
+      .feed { border-top: 1px solid var(--line-soft); padding: 0 16px 16px; background: var(--bg2); }
+      .feed-log { font-family: var(--mono); font-size: 12px; line-height: 1.9; color: var(--ink-dim); min-height: 118px; }
+      .feed-log .t { color: var(--ink-faint); }
+      .feed-log .g { color: var(--green); font-weight: 700; }
+      .feed-log .gold { color: var(--gold); font-weight: 700; }
+      .settle-banner { display: none; margin-top: 12px; border: 1px solid var(--green); background: rgba(43,224,127,.08); padding: 12px; font-family: var(--mono); text-align: center; }
+      .settle-banner.show { display: block; animation: callReveal 0.5s ease both; }
+      .settle-banner b { color: var(--green); font-size: 20px; letter-spacing: 0.08em; }
+      .settle-banner span { display: block; color: var(--ink-dim); font-size: 11px; letter-spacing: 0.08em; margin-top: 3px; }
+      .replay-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+      .trial-callout { border: 1px solid #4a3d14; background: rgba(245,201,76,.07); padding: 12px 14px; margin-bottom: 16px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+      .trial-callout p { margin: 0; color: var(--ink-dim); font-size: 14px; }
+      .trial-callout b { color: var(--gold); }
+      .trial-callout .btn { background: var(--gold); border-color: var(--gold); color: #1a1402; white-space: nowrap; }
+      .trial-strip { border: 1.5px solid var(--gold); background: linear-gradient(180deg, rgba(245,201,76,.10), rgba(245,201,76,.03)); padding: 18px; margin-bottom: 12px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+      .trial-strip .pk { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; color: var(--gold); display: block; margin-bottom: 5px; }
+      .trial-strip h3 { margin: 0 0 6px; font-size: 20px; }
+      .trial-strip p { margin: 0; color: var(--ink-dim); font-size: 14.5px; max-width: 44em; }
+      .trial-strip .btn { background: var(--gold); border-color: var(--gold); color: #1a1402; white-space: nowrap; }
+      #sealedMarker { animation: sealPulse 2.4s ease-in-out infinite; }
+      @keyframes sealPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+      @media (max-width: 560px) { .cp-row { grid-template-columns: 72px 1fr 76px; font-size: 10.5px; } }
+
+      /* ---------- graded calls ---------- */
+      .calls { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }
+      .calls th {
+        text-align: left; font-size: 10px; letter-spacing: 0.16em; color: var(--ink-faint);
+        font-weight: 500; padding: 10px 12px; border-bottom: 1px solid var(--line);
+      }
+      .calls td { padding: 10px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+      .calls tr:last-child td { border-bottom: none; }
+      .pill { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; border: 1px solid; }
+      .pill.up { color: var(--green); border-color: var(--green-dim); background: rgba(43,224,127,.07); }
+      .pill.dn { color: var(--red); border-color: var(--red-dim); background: rgba(255,84,104,.07); }
+      .pill.out { color: var(--ink-dim); border-color: var(--line); background: transparent; }
+      .res-w { color: var(--green); font-weight: 700; }
+      .res-l { color: var(--red); font-weight: 700; }
+      .num-g { color: var(--green); } .num-r { color: var(--red); }
+      .calls .hide-sm { display: none; }
+      @media (min-width: 640px) { .calls .hide-sm { display: table-cell; } }
+
+      /* ---------- how it works ---------- */
+      .steps { display: grid; gap: 12px; }
+      .step { display: flex; gap: 14px; background: var(--panel); border: 1px solid var(--line); padding: 16px; }
+      .step-n {
+        font-family: var(--mono); font-weight: 800; font-size: 20px; color: var(--green);
+        border: 1px solid var(--green-dim); width: 42px; height: 42px; flex: 0 0 42px;
+        display: grid; place-items: center; background: rgba(43,224,127,.05);
+      }
+      .step h3 { margin: 2px 0 5px; font-size: 16.5px; }
+      .step p { margin: 0; color: var(--ink-dim); font-size: 14.5px; }
+      .step p b { color: var(--ink); }
+      .vip-inline {
+        margin-top: 10px; border: 1px solid #4a3d14; background: rgba(245,201,76,.06);
+        padding: 10px 12px; font-size: 13.5px; color: var(--ink-dim);
+      }
+      .vip-inline b { color: var(--gold); }
+
+      /* ---------- security ---------- */
+      .sec-grid { display: grid; gap: 12px; }
+      .sec-card { background: var(--panel); border: 1px solid var(--line); padding: 18px; }
+      .sec-card h3 { margin: 0 0 7px; font-size: 16.5px; display: flex; gap: 9px; align-items: baseline; }
+      .sec-card h3 .ic { color: var(--green); font-family: var(--mono); font-size: 15px; }
+      .sec-card p { margin: 0; color: var(--ink-dim); font-size: 14.5px; }
+      .sec-card.warn { border-color: #4d2b33; }
+      .sec-card.warn h3 .ic { color: var(--red); }
+      .sec-card.warn h3 { color: #ffb3bc; }
+
+      /* ---------- pricing ---------- */
+      .price-grid { display: grid; gap: 12px; }
+      .price-card { background: var(--panel); border: 1px solid var(--line); padding: 20px 18px; display: flex; flex-direction: column; }
+      .price-card .pk { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; color: var(--ink-dim); }
+      .price-card .amt { font-family: var(--mono); font-size: 40px; font-weight: 800; margin: 8px 0 2px; }
+      .price-card .amt small { font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+      .price-card .per { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); margin-bottom: 14px; }
+      .price-card ul { list-style: none; margin: 0 0 18px; padding: 0; color: var(--ink-dim); font-size: 14px; display: grid; gap: 7px; }
+      .price-card ul li::before { content: "▸ "; color: var(--green); font-family: var(--mono); }
+      .price-card .btn { margin-top: auto; }
+      .price-card.pop { border-color: var(--green); }
+      .price-card.pop .pk { color: var(--green); }
+      .price-card.vip { border-color: #6b5a1e; background: linear-gradient(180deg, rgba(245,201,76,.07), var(--panel) 55%); }
+      .price-card.vip .pk { color: var(--gold); }
+      .price-card.vip .amt { color: var(--gold); }
+      .price-card.vip ul li::before { color: var(--gold); }
+      .price-card.vip .btn { background: var(--gold); border-color: var(--gold); color: #1a1402; }
+      .price-note { font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint); margin-top: 12px; letter-spacing: 0.03em; }
+      .free-strip {
+        border: 1px solid var(--green-dim); background: rgba(43,224,127,.05);
+        padding: 16px 18px; margin-bottom: 12px; display: flex; gap: 16px;
+        align-items: center; justify-content: space-between; flex-wrap: wrap;
+      }
+      .free-strip .pk { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; color: var(--green); display: block; margin-bottom: 5px; }
+      .free-strip p { margin: 0; color: var(--ink-dim); font-size: 14.5px; max-width: 44em; }
+      .member-line {
+        border: 1px dashed var(--green-dim); background: rgba(43,224,127,.06);
+        padding: 8px 10px; margin: 0 0 14px; font-family: var(--mono); font-size: 12px;
+        color: var(--ink-dim); letter-spacing: 0.02em;
+      }
+      .member-line b { color: var(--green); font-size: 14px; }
+      .member-line s { color: var(--ink-faint); }
+      @media (max-width: 560px) {
+        .brand-sub { display: none; }
+        .topbar .btn { white-space: nowrap; }
+        .status { font-size: 10px; letter-spacing: 0.04em; }
+      }
+
+      /* ---------- faq ---------- */
+      details { border: 1px solid var(--line); background: var(--panel); }
+      details + details { margin-top: 10px; }
+      summary {
+        cursor: pointer; padding: 15px 16px; font-weight: 600; font-size: 15.5px;
+        list-style: none; display: flex; justify-content: space-between; gap: 12px;
+      }
+      summary::-webkit-details-marker { display: none; }
+      summary::after { content: "+"; font-family: var(--mono); color: var(--green); font-size: 18px; }
+      details[open ] summary::after { content: "−"; }
+      details .faq-body { padding: 0 16px 16px; color: var(--ink-dim); font-size: 14.5px; }
+      details .faq-body p { margin: 0; }
+
+      /* ---------- final cta / footer ---------- */
+      .finalcta { text-align: center; padding: 48px 0 8px; }
+      .finalcta h2 { font-size: clamp(24px, 5.4vw, 36px); margin: 0 0 10px; font-weight: 800; }
+      .finalcta p { color: var(--ink-dim); margin: 0 auto 20px; max-width: 36em; }
+      footer { border-top: 1px solid var(--line); margin-top: 44px; padding: 26px 0 40px; }
+      .foot-brand { font-family: var(--mono); font-weight: 800; letter-spacing: 0.22em; font-size: 15px; margin-bottom: 12px; }
+      .risk { font-size: 12.5px; color: var(--ink-faint); max-width: 62em; }
+      .risk b { color: var(--ink-dim); }
+      .foot-links { display: flex; gap: 18px; flex-wrap: wrap; font-family: var(--mono); font-size: 12px; margin: 16px 0 0; }
+      .foot-links a { color: var(--ink-dim); text-decoration: none; }
+
+      @media (min-width: 860px) {
+        .hero-grid { grid-template-columns: 1.15fr 0.85fr; align-items: start; }
+        .steps { grid-template-columns: 1fr 1fr; }
+        .sec-grid { grid-template-columns: 1fr 1fr; }
+        .price-grid { grid-template-columns: repeat(4, 1fr); }
+        .topnav { display: flex; }
+        .hero { padding-top: 48px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .dot, #sealedMarker, .sealed-pill.is-sealing, .call-value.is-reveal, .settle-banner.show { animation: none; }
+        .cp-bar i { transition: none; }
+        html { scroll-behavior: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ======= TOP BAR ======= -->
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="brand" href="#">
+          <span class="brand-mark">O</span>
+          <span>
+            <span class="brand-name">ORACLE</span>
+            <span class="brand-sub">BTC · KALSHI · 15-MIN</span>
+          </span>
+        </a>
+        <nav class="topnav">
+          <a href="#record">RECORD</a>
+          <a href="#how">HOW IT WORKS</a>
+          <a href="#security">SECURITY</a>
+          <a href="#pricing">PRICING</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <span class="status"><span class="dot"></span>ENGINE&nbsp;ONLINE</span>
+          <a class="btn small" href="#pricing">Connect Kalshi</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- ======= HERO ======= -->
+    <div class="wrap">
+      <div class="hero">
+        <div class="ticker mono">
+          <span>BTC/USD <b>$114,382</b> <span class="up">▲ 1.8% 24H</span></span>
+          <span>WINDOW <b>15 MIN</b></span>
+          <span>MARKET <b>KALSHI KXBTC15M</b></span>
+          <span>SIT-OUT RATE <b>26%</b></span>
+        </div>
+        <div class="hero-grid">
+          <div>
+            <h1>A Bitcoin auto-trader that calls every 15 minutes — <span class="g">and trades for you.</span></h1>
+            <p class="lede">
+              ORACLE reads BTC momentum across multiple timeframes, checks it against Kalshi's own
+              prices, and only trades when the two agree. Connect your Kalshi API key, set your
+              size, and it executes — or sits out — every window. You watch it live.
+            </p>
+            <div class="hero-ctas">
+              <a class="btn" href="#pricing">Start free 1-hour trial</a>
+              <a class="btn ghost" href="#record">See the record</a>
+            </div>
+            <div class="trial-callout">
+              <p><b>FREE 1 HOUR — FOR EVERYONE.</b> No card. Press Start and your 60 minutes begin — watch ORACLE trade live, sealed calls and all. One per person, tied to your account + Kalshi lock.</p>
+              <a class="btn small" href="#pricing">Start free hour →</a>
+            </div>
+            <p class="hero-note">NO WITHDRAWAL ACCESS · KEYS ENCRYPTED · STOP ANYTIME · TRIAL SEPARATE FROM MEMBER FREE DAY &amp; VIP FREE WEEK</p>
+          </div>
+
+          <div class="panel" id="record">
+            <div class="panel-head">
+              <span>LIVE RECORD — ORACLE BTC</span>
+              <span class="live">PAPER</span>
+            </div>
+            <div class="record-body">
+              <div class="winrate">84.4<small>% WIN RATE</small></div>
+              <p class="record-sub">76 WINS — 14 LOSSES · EVERY CALL GRADED, LOSSES INCLUDED</p>
+              <div class="streak-strip" aria-label="Current win streak: 6 straight wins">
+                <span class="streak-label">STREAK<br />COUNTER</span>
+                <span class="streak-pips" aria-hidden="true"><span>W</span><span>W</span><span>W</span><span>W</span><span>W</span><span>W</span></span>
+                <span class="streak-val">W6</span>
+                <span class="streak-sub">6 straight wins · updates on every settlement</span>
+              </div>
+              <div class="statgrid">
+                <div class="stat"><span class="k">SETTLED CALLS</span><span class="v">n = 90</span></div>
+                <div class="stat"><span class="k">CURRENT STREAK</span><span class="v g">W6</span></div>
+                <div class="stat"><span class="k">BTC PRICE</span><span class="v">$114,382</span></div>
+                <div class="stat"><span class="k">NEXT ROUND</span><span class="v" id="countdown">--:--</span></div>
+                <div class="stat"><span class="k">WINDOWS TRADED</span><span class="v">74%</span></div>
+                <div class="stat"><span class="k">SIT-OUTS</span><span class="v">26%</span></div>
+              </div>
+            </div>
+            <p class="honest">Forward paper record, graded against Kalshi-official settlements. Paper trading — no real money has been traded on this record yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= DASHBOARD PREVIEW ======= -->
+      <section id="dashboard">
+        <div class="sec-head">
+          <span class="tag">// THE TERMINAL</span>
+          <h2>What you see while it trades</h2>
+          <p>Every window, the call reveals live, locks with a sealed marker, and plays out through checkpoint meters to a settlement reveal — direction, confidence, and the price BTC has to beat. Nothing is edited after the seal.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span>CURRENT WINDOW — BTC 15M · LIVE THEATRICS</span><span id="win-clock">CLOSES IN --:--</span></div>
+          <div class="theatrics-bar" aria-label="Live window stages">
+            <span class="stage" data-stage="scan">1 · SCANNING</span>
+            <span class="stage" data-stage="reveal">2 · CALL REVEAL</span>
+            <span class="stage" data-stage="sealed">3 · SEALED</span>
+            <span class="stage" data-stage="checkpoints">4 · CHECKPOINTS</span>
+            <span class="stage" data-stage="settled">5 · SETTLEMENT</span>
+          </div>
+          <div class="callbanner">
+            <div>
+              <span class="call-label">ORACLE CALL — REVEALED LIVE</span>
+              <div class="call-value" id="callValue"><span class="arrow">▲</span> UP</div>
+              <span class="sealed-pill" id="sealedPill">SEALED · 02:14 INTO WINDOW · LOCKED — NO EDITS AFTER</span>
+            </div>
+            <div class="call-meta">
+              CONFIDENCE <b>81%</b><br />
+              ENTRY <b>62¢ YES</b> · SIZE <b>YOUR SETTING</b><br />
+              SEALED AT <b>+02:14</b>
+            </div>
+          </div>
+          <div class="chartbox">
+            <svg viewBox="0 0 720 240" width="100%" role="img" aria-label="BTC price chart for the current 15-minute window, trading above the price-to-beat line" style="display:block;">
+              <defs>
+                <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#2be07f" stop-opacity="0.22" />
+                  <stop offset="1" stop-color="#2be07f" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+              <!-- grid -->
+              <g stroke="#16201a" stroke-width="1">
+                <line x1="0" y1="40" x2="720" y2="40" /><line x1="0" y1="90" x2="720" y2="90" />
+                <line x1="0" y1="140" x2="720" y2="140" /><line x1="0" y1="190" x2="720" y2="190" />
+              </g>
+              <!-- price to beat -->
+              <line x1="0" y1="128" x2="720" y2="128" stroke="#f5b83d" stroke-width="1.5" stroke-dasharray="7 5" />
+              <text x="8" y="120" fill="#f5b83d" font-family="JetBrains Mono, monospace" font-size="11">PRICE TO BEAT $114,205</text>
+              <!-- area + line -->
+              <path d="M0,168 L60,158 L120,172 L180,148 L240,156 L300,132 L360,140 L420,112 L480,120 L540,92 L600,100 L660,74 L720,66 L720,240 L0,240 Z" fill="url(#fill)" />
+              <path d="M0,168 L60,158 L120,172 L180,148 L240,156 L300,132 L360,140 L420,112 L480,120 L540,92 L600,100 L660,74 L720,66" fill="none" stroke="#2be07f" stroke-width="2.5" />
+              <!-- SEALED MARKER: the moment the decision locked in -->
+              <g id="sealedMarker">
+                <line x1="107" y1="18" x2="107" y2="218" stroke="#f5c94c" stroke-width="2" stroke-dasharray="5 4" />
+                <circle cx="107" cy="169" r="7" fill="#060807" stroke="#f5c94c" stroke-width="2.5" />
+                <circle cx="107" cy="169" r="2.5" fill="#f5c94c" />
+                <rect x="33" y="18" width="148" height="22" fill="#f5c94c" />
+                <text x="107" y="33" text-anchor="middle" fill="#1a1402" font-family="JetBrains Mono, monospace" font-size="11" font-weight="800">◆ SEALED +02:14</text>
+                <text x="107" y="56" text-anchor="middle" fill="#f5c94c" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700">CALL LOCKED ▲ UP</text>
+              </g>
+              <circle cx="720" cy="66" r="4" fill="#2be07f" />
+              <text x="636" y="52" fill="#e8f0e9" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700">$114,382</text>
+              <!-- window markers -->
+              <g font-family="JetBrains Mono, monospace" font-size="10" fill="#63756a">
+                <text x="8" y="232">WINDOW OPEN</text>
+                <text x="330" y="232">+7 MIN</text>
+                <text x="648" y="232">SETTLE</text>
+              </g>
+            </svg>
+            <div class="chart-legend">
+              <span><span class="sw"></span>BTC PRICE</span>
+              <span><span class="sw beat"></span>PRICE TO BEAT (KALSHI)</span>
+              <span style="color:var(--gold)">◆ SEALED MARKER — THE MOMENT THE CALL LOCKED IN</span>
+              <span>AFTER THE SEAL, THE CALL NEVER CHANGES</span>
+            </div>
+          </div>
+          <div class="meters">
+            <div class="meter-row"><span class="mk">MOMENTUM 1M/5M</span><span class="bar"><i style="width:84%"></i></span><span class="mv">84</span></div>
+            <div class="meter-row"><span class="mk">TIMEFRAME AGREE</span><span class="bar"><i style="width:78%"></i></span><span class="mv">78</span></div>
+            <div class="meter-row"><span class="mk">KALSHI IMPLIED</span><span class="bar"><i style="width:62%"></i></span><span class="mv">62¢</span></div>
+            <div class="meter-row"><span class="mk">REGIME FIT</span><span class="bar"><i class="amb" style="width:57%"></i></span><span class="mv">57</span></div>
+          </div>
+          <div class="checkpoints">
+            <h4>CHECKPOINT METERS — WHO'S WINNING AS THE CLOCK RUNS DOWN</h4>
+            <div class="cp-row" data-cp="0"><span class="cp-t">13 MIN LEFT</span><span class="cp-bar"><i style="width:0%"></i></span><span class="cp-w">—</span></div>
+            <div class="cp-row" data-cp="1"><span class="cp-t">10 MIN LEFT</span><span class="cp-bar"><i style="width:0%"></i></span><span class="cp-w">—</span></div>
+            <div class="cp-row" data-cp="2"><span class="cp-t">7 MIN LEFT</span><span class="cp-bar"><i style="width:0%"></i></span><span class="cp-w">—</span></div>
+            <div class="cp-row" data-cp="3"><span class="cp-t">5 MIN LEFT</span><span class="cp-bar"><i style="width:0%"></i></span><span class="cp-w">—</span></div>
+            <div class="cp-row" data-cp="4"><span class="cp-t">3 MIN LEFT</span><span class="cp-bar"><i style="width:0%"></i></span><span class="cp-w">—</span></div>
+            <p style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin:6px 0 0;">Bar = how far BTC is holding above the price to beat at that checkpoint. The call is already sealed — checkpoints never change it, they just show the race.</p>
+          </div>
+          <div class="feed">
+            <div class="feed-head">LIVE WINDOW — HOW A TRADE PLAYS OUT</div>
+            <div class="feed-log" id="feedLog" aria-live="polite"></div>
+            <div class="settle-banner" id="settleBanner"><b>✓ SETTLED — WIN</b><span>OFFICIAL KALSHI SETTLEMENT · YES · STREAK EXTENDS TO W7 IN THIS REPLAY</span></div>
+            <div class="replay-row">
+              <span style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);">REPLAY OF A LIVE WINDOW'S THEATRICS — REVEAL → SEAL → CHECKPOINTS → SETTLEMENT</span>
+              <button class="btn ghost small" id="replayBtn" type="button">↻ Replay theatrics</button>
+            </div>
+          </div>
+          <p class="dash-note">Preview of the member terminal. When the signals disagree, the banner reads <b style="color:var(--ink-dim)">SIT OUT</b> and no trade is placed on your account that window — sitting out is a decision, not a gap. No seal is stamped on a sit-out.</p>
+        </div>
+      </section>
+
+      <!-- ======= GRADED CALLS ======= -->
+      <section id="calls">
+        <div class="sec-head">
+          <span class="tag">// RECEIPTS</span>
+          <h2>Recent graded calls</h2>
+          <p>Settled against Kalshi's official results. Wins and losses both stay on the board — that's the whole point of a public record.</p>
+        </div>
+        <div class="panel">
+          <table class="calls">
+            <thead>
+              <tr><th>WINDOW (PT)</th><th>CALL</th><th class="hide-sm">ENTRY</th><th>SETTLED</th><th>RESULT</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Oct 12 · 3:45 PM</td><td><span class="pill up">▲ UP</span></td><td class="hide-sm">61¢</td><td>YES</td><td class="res-w">WIN</td></tr>
+              <tr><td>Oct 12 · 3:30 PM</td><td><span class="pill up">▲ UP</span></td><td class="hide-sm">58¢</td><td>YES</td><td class="res-w">WIN</td></tr>
+              <tr><td>Oct 12 · 3:15 PM</td><td><span class="pill out">SIT OUT</span></td><td class="hide-sm">—</td><td>NO</td><td style="color:var(--ink-faint)">NO TRADE</td></tr>
+              <tr><td>Oct 12 · 3:00 PM</td><td><span class="pill dn">▼ DOWN</span></td><td class="hide-sm">55¢</td><td>YES</td><td class="res-l">LOSS</td></tr>
+              <tr><td>Oct 12 · 2:45 PM</td><td><span class="pill up">▲ UP</span></td><td class="hide-sm">64¢</td><td>YES</td><td class="res-w">WIN</td></tr>
+              <tr><td>Oct 12 · 2:30 PM</td><td><span class="pill dn">▼ DOWN</span></td><td class="hide-sm">59¢</td><td>NO</td><td class="res-w">WIN</td></tr>
+              <tr><td>Oct 12 · 2:15 PM</td><td><span class="pill up">▲ UP</span></td><td class="hide-sm">52¢</td><td>NO</td><td class="res-l">LOSS</td></tr>
+              <tr><td>Oct 12 · 2:00 PM</td><td><span class="pill up">▲ UP</span></td><td class="hide-sm">60¢</td><td>YES</td><td class="res-w">WIN</td></tr>
+              <tr><td>Oct 12 · 1:45 PM</td><td><span class="pill dn">▼ DOWN</span></td><td class="hide-sm">57¢</td><td>NO</td><td class="res-w">WIN</td></tr>
+              <tr><td>Oct 12 · 1:30 PM</td><td><span class="pill out">SIT OUT</span></td><td class="hide-sm">—</td><td>YES</td><td style="color:var(--ink-faint)">NO TRADE</td></tr>
+            </tbody>
+          </table>
+          <p class="honest">Sample of the live log format. Full history — all 90 settled calls — is visible to members inside the terminal.</p>
+        </div>
+      </section>
+
+      <!-- ======= HOW IT WORKS ======= -->
+      <section id="how">
+        <div class="sec-head">
+          <span class="tag">// SETUP — UNDER 5 MINUTES</span>
+          <h2>How it works</h2>
+          <p>Your money never leaves your Kalshi account. ORACLE only places trades inside it, at the size you set.</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-n">1</div>
+            <div>
+              <h3>Create your account &amp; link Discord</h3>
+              <p>Sign in and link your Discord account — <b>nothing can be claimed before this step</b>. Your linked Discord is how eligibility is validated: server member → your free day unlocks; <b>VIP role</b> → your monthly free week unlocks. Paid passes come after — only if you want them.</p>
+              <div class="vip-inline"><b>👑 VIP members:</b> <b>claim your free 7-day week every month</b> — the 7 days start the moment you claim, not before. One per month, no rollover. No card required.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-n">2</div>
+            <div>
+              <h3>Connect your Kalshi API key</h3>
+              <p>Generate a key in your Kalshi settings and paste it here. It's stored <b>encrypted</b>, used only to trade on <b>your</b> account, and Kalshi keys <b>cannot withdraw funds</b> — ever. Revoke it in Kalshi anytime and access ends instantly.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-n">3</div>
+            <div>
+              <h3>Set your size &amp; daily cap</h3>
+              <p>You choose <b>dollars per trade</b> and a <b>daily loss cap</b>. ORACLE never exceeds either. Hit the cap and it stops for the day — no exceptions, no overrides.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-n">4</div>
+            <div>
+              <h3>ORACLE trades — you watch live</h3>
+              <p>Every 15 minutes: a call, a trade (or a sit-out), and a settlement, all in your terminal in real time. Pause or disconnect whenever you like; your open positions stay yours in Kalshi.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======= SECURITY ======= -->
+      <section id="security">
+        <div class="sec-head">
+          <span class="tag">// KEY SECURITY</span>
+          <h2>Your key can't move your money out</h2>
+          <p>This is the part that matters most, so here it is in plain terms.</p>
+        </div>
+        <div class="sec-grid">
+          <div class="sec-card">
+            <h3><span class="ic">▣</span> API keys cannot withdraw</h3>
+            <p>A Kalshi API key can read your account and place trades — nothing else. Withdrawals can only happen inside your own Kalshi login, with your own credentials. There is no API endpoint that sends your money anywhere, so a leaked key could never drain your balance to someone else's account.</p>
+          </div>
+          <div class="sec-card">
+            <h3><span class="ic">▣</span> Encrypted at rest</h3>
+            <p>Your key is encrypted before it's stored and only decrypted in memory at the moment a trade is placed. It is never shown back in full, never emailed, and never logged.</p>
+          </div>
+          <div class="sec-card">
+            <h3><span class="ic">■</span> The kill switch</h3>
+            <p>Every account gets a big pause button in the terminal — one tap halts all trading on your account instantly — plus a daily loss cap you set yourself. Hit the cap and ORACLE stops for the day on its own. <b style="color:var(--ink)">You're always one tap from stopping it.</b></p>
+          </div>
+          <div class="sec-card">
+            <h3><span class="ic">▣</span> One Discord, one Kalshi</h3>
+            <p>One Discord account links to exactly one Kalshi account. If you relink to a different Kalshi account, there's a 30-day cooldown before you can relink again — free weeks and free days can't be passed around or farmed across accounts.</p>
+          </div>
+          <div class="sec-card">
+            <h3><span class="ic">▣</span> Revoke anytime, instantly</h3>
+            <p>Delete the key in your Kalshi settings and ORACLE's access ends that second — no support ticket, no waiting period. You can also pause trading from your terminal with one tap.</p>
+          </div>
+          <div class="sec-card">
+            <h3><span class="ic">▣</span> Use a dedicated subaccount</h3>
+            <p>Our recommendation: open a separate Kalshi subaccount just for ORACLE, fund it with only what you're comfortable risking, and keep your main balance untouched. Clean separation, hard limit by design.</p>
+          </div>
+          <div class="sec-card warn" style="grid-column: 1 / -1;">
+            <h3><span class="ic">▲</span> The honest part</h3>
+            <p>A trading key can't steal your money — but it <b>can lose it trading</b>. ORACLE will have losing windows and losing days; the record above includes them. Your per-trade size and daily cap exist so a bad stretch stays a bad stretch, not a disaster. Never fund it with money you can't afford to lose.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======= PRICING ======= -->
+      <section id="pricing">
+        <div class="sec-head">
+          <span class="tag">// ACCESS</span>
+          <h2>Pick your pass</h2>
+          <p>Two price tiers, sorted by your Discord link. Headline prices are public. Link your Discord and verify your member role, and member prices unlock — on every pass. Subscriptions run through Whop, auto-renew, and cancel anytime. Every claim — free day or VIP free week — requires a linked Discord account first: that's how eligibility is checked.</p>
+        </div>
+        <div class="trial-strip" id="trial">
+          <div>
+            <span class="pk">FREE 1-HOUR TRIAL — EVERYONE · NO CARD</span>
+            <h3>Try ORACLE live for 1 hour, free</h3>
+            <p>The public on-ramp. Create your account, press <b style="color:var(--ink)">Start</b> — your 60 minutes start at that tap, not at signup. Watch live reveals, sealed calls, checkpoint meters and settlements for a full hour. <b style="color:var(--ink)">One trial per person</b>, tied to your account and your Kalshi lock so it can't be farmed. Separate from the member free day and the VIP free week below — those still require a linked Discord.</p>
+          </div>
+          <a class="btn" href="#how">Start free hour</a>
+        </div>
+        <div class="free-strip">
+          <div>
+            <span class="pk">EVERY MEMBER — ONE FREE DAY</span>
+            <p>New here? Link your Discord, claim your free day, and watch ORACLE trade a full day of windows before you spend a cent. Your 24 hours start when you claim. No card required.</p>
+          </div>
+          <a class="btn" href="#how">Link Discord to claim</a>
+        </div>
+        <div class="price-grid">
+          <div class="price-card vip">
+            <span class="pk">👑 VIP — DISCORD MEMBERS</span>
+            <div class="amt">FREE</div>
+            <div class="per">ONE 7-DAY WEEK · EVERY MONTH · CLAIM TO START</div>
+            <ul>
+              <li>Link Discord — VIP role checked automatically</li>
+              <li>Claim your free week; the 7 days start when you claim</li>
+              <li>One per month, no rollover — unclaimed weeks don't stack</li>
+              <li>On a paid pass? Claiming pauses your paid clock</li>
+              <li>Lose the VIP role and free access ends immediately</li>
+              <li>Outside the free week, VIPs pay member prices</li>
+            </ul>
+            <a class="btn" href="#how">Link Discord to claim</a>
+          </div>
+          <div class="price-card">
+            <span class="pk">DAY PASS — PUBLIC</span>
+            <div class="amt">$19.99<small> /day</small></div>
+            <div class="per">VIA WHOP · AUTO-RENEWS DAILY · CANCEL ANYTIME</div>
+            <div class="member-line">MEMBERS PAY <b>$14.99</b> <s>$19.99</s> — LINK DISCORD TO UNLOCK</div>
+            <ul>
+              <li>Full ORACLE BTC access</li>
+              <li>Your size, your daily cap</li>
+              <li>Live terminal &amp; full call history</li>
+            </ul>
+            <a class="btn ghost" href="#how">Start day pass</a>
+          </div>
+          <div class="price-card pop">
+            <span class="pk">WEEK — MOST POPULAR</span>
+            <div class="amt">$69.99<small> /week</small></div>
+            <div class="per">VIA WHOP · AUTO-RENEWS WEEKLY · CANCEL ANYTIME</div>
+            <div class="member-line">MEMBERS PAY <b>$49.99</b> <s>$69.99</s> — LINK DISCORD TO UNLOCK</div>
+            <ul>
+              <li>Everything in Day Pass</li>
+              <li>Best way to judge the record over ~100 windows</li>
+              <li>Priority support in Discord</li>
+            </ul>
+            <a class="btn" href="#how">Start week</a>
+          </div>
+          <div class="price-card">
+            <span class="pk">MONTH — PUBLIC</span>
+            <div class="amt">$199.99<small> /mo</small></div>
+            <div class="per">VIA WHOP · AUTO-RENEWS MONTHLY · CANCEL ANYTIME</div>
+            <div class="member-line">MEMBERS PAY <b>$149.99</b> <s>$199.99</s> — LINK DISCORD TO UNLOCK</div>
+            <ul>
+              <li>Everything in Week</li>
+              <li>Lowest per-day cost</li>
+              <li>Early access to new markets if ORACLE expands</li>
+            </ul>
+            <a class="btn ghost" href="#how">Start month</a>
+          </div>
+        </div>
+        <p class="price-note">SUBSCRIPTIONS RUN THROUGH WHOP · AUTO-RENEW · CANCEL ANYTIME. MEMBER PRICES UNLOCK WHEN YOUR DISCORD IS LINKED AND YOUR MEMBER ROLE IS VERIFIED. FREE CLAIMS NEVER ASK FOR A CARD. MEMBER FREE DAY &amp; VIP FREE WEEK REQUIRE A LINKED DISCORD ACCOUNT. FREE 1-HOUR TRIAL: ONE PER PERSON, CLOCK STARTS ON START, TIED TO YOUR ACCOUNT + KALSHI LOCK.</p>
+      </section>
+
+      <!-- ======= FAQ ======= -->
+      <section id="faq">
+        <div class="sec-head">
+          <span class="tag">// QUESTIONS</span>
+          <h2>Asked straight, answered straight</h2>
+        </div>
+        <details>
+          <summary>Is my money safe?</summary>
+          <div class="faq-body"><p>Your money stays in your own Kalshi account the entire time — ORACLE never holds it. A Kalshi API key cannot withdraw funds; money can only leave your account from inside your own Kalshi login. Your key is stored encrypted, and you can revoke it in Kalshi settings at any moment. What no one can promise is trading profit: the bot can and does lose trades, which is why you set the size and the daily cap.</p></div>
+        </details>
+        <details>
+          <summary>Can I stop anytime?</summary>
+          <div class="faq-body"><p>Yes, three ways: hit the big pause button in your terminal (you're always one tap from stopping it), cancel your subscription (access runs to the end of the current pass), or revoke the API key in Kalshi — that one is instant and total. Your self-set daily loss cap also stops trading automatically when it's hit. Any position already open settles normally in your Kalshi account; it's yours.</p></div>
+        </details>
+        <details>
+          <summary>What does it trade?</summary>
+          <div class="faq-body"><p>Bitcoin only: Kalshi's 15-minute BTC up/down markets. One asset, one timeframe, one strategy — a multi-timeframe momentum model that cross-checks Kalshi's implied price before it trades, sized by your settings and bounded by your daily cap.</p></div>
+        </details>
+        <details>
+          <summary>What are sit-outs?</summary>
+          <div class="faq-body"><p>Windows where ORACLE's signals disagree with each other or with Kalshi's price, so it places no trade. About 1 in 4 windows is a sit-out. Skipping the coin-flips is a big part of why the traded record looks the way it does — forcing a trade every window would be worse, and the graded history shows both.</p></div>
+        </details>
+        <details>
+          <summary>How does the free 1-hour trial work?</summary>
+          <div class="faq-body"><p>It's for everyone, no card required. Create an account and press Start — your 60 minutes begin at that tap, not when you signed up. You get one trial per person, tied to your account and your Kalshi lock, so it can't be restarted or farmed across accounts. It's separate from the Discord-linked claims: members still get their one free day and VIPs still get their monthly free week, and those still require a linked Discord first.</p></div>
+        </details>
+        <details>
+          <summary>What is the sealed marker?</summary>
+          <div class="faq-body"><p>When ORACLE's decision locks in, a sealed marker is stamped on the live chart at that exact moment — side, time into the window, and entry. After the seal, the call never changes: no edits, no quiet flips. Checkpoint meters then show who's winning at 13, 10, 7, 5 and 3 minutes left, and the window ends with a settlement reveal graded against Kalshi's official result.</p></div>
+        </details>
+        <details>
+          <summary>How do the free claims work?</summary>
+          <div class="faq-body"><p>Every claim starts with linking your Discord — no linked Discord, no claim. That's how eligibility is validated. Server members get one free day; VIP members get one free 7-day week every month. Both are claim-based: your time starts the moment you tap claim, not before. Free weeks don't roll over or stack. If you're on a paid subscription and claim a free week, your paid clock pauses while the free week runs. And if you lose the VIP role, free VIP access ends immediately — no grace period.</p></div>
+        </details>
+        <details>
+          <summary>Can I share my access or switch Kalshi accounts?</summary>
+          <div class="faq-body"><p>No sharing: one Discord account links to exactly one Kalshi account. If you relink to a different Kalshi account, a 30-day cooldown applies before you can relink again. Free days and free weeks are tied to the linked pair, so they can't be passed to another account.</p></div>
+        </details>
+        <details>
+          <summary>Is the 84.4% record real money?</summary>
+          <div class="faq-body"><p>No — it's a forward paper record: real live calls made in real time, graded against Kalshi's official settlements, traded with paper money. It's the honest way to prove a strategy before anyone's real account is involved, and it's labeled paper everywhere it appears.</p></div>
+        </details>
+      </section>
+
+      <!-- ======= FINAL CTA ======= -->
+      <div class="finalcta">
+        <h2>Start with a free hour.<br />Watch a call get sealed live.</h2>
+        <p>Sixty free minutes, clock starts when you press Start. Then connect your key, set your cap, and let it run — your funds stay in your Kalshi account, under your limits, revocable whenever you say so.</p>
+        <a class="btn" href="#pricing" style="padding:13px 26px;font-size:14px;">Start free 1-hour trial</a>
+      </div>
+
+      <!-- ======= FOOTER ======= -->
+      <footer>
+        <div class="foot-brand">ORACLE</div>
+        <p class="risk">
+          <b>Risk disclaimer:</b> Trading on Kalshi involves risk, including the possible loss of your entire stake on any trade.
+          ORACLE is an automated tool that executes a strategy on your account under limits you set; it does not guarantee
+          profits, and past performance — including the paper record shown on this page — does not guarantee future results.
+          The record displayed is from forward paper trading graded against Kalshi-official settlements, not live-money trading.
+          Event contracts are regulated by the CFTC and traded on KalshiEX LLC. Only trade with money you can afford to lose.
+          ORACLE is not affiliated with or endorsed by Kalshi.
+        </p>
+        <div class="foot-links">
+          <a href="#record">RECORD</a><a href="#how">HOW IT WORKS</a><a href="#security">SECURITY</a><a href="#pricing">PRICING</a><a href="#faq">FAQ</a>
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      // Countdown to the next 15-minute window boundary (display only).
+      function tick() {
+        var now = new Date();
+        var next = new Date(now);
+        next.setMinutes(Math.floor(now.getMinutes() / 15) * 15 + 15, 0, 0);
+        var s = Math.max(0, Math.floor((next - now) / 1000));
+        var mm = String(Math.floor(s / 60)).padStart(2, "0");
+        var ss = String(s % 60).padStart(2, "0");
+        var t = mm + ":" + ss;
+        var a = document.getElementById("countdown");
+        var b = document.getElementById("win-clock");
+        if (a) a.textContent = t;
+        if (b) b.textContent = "CLOSES IN " + t;
+      }
+      tick();
+      setInterval(tick, 1000);
+
+      // ---- Live theatrics replay: reveal -> seal -> checkpoints -> settlement ----
+      (function () {
+        var log = document.getElementById("feedLog");
+        var banner = document.getElementById("settleBanner");
+        var pill = document.getElementById("sealedPill");
+        var call = document.getElementById("callValue");
+        var btn = document.getElementById("replayBtn");
+        if (!log || !banner || !pill || !call) return;
+        var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var timers = [];
+        var cps = [
+          { w: 58, label: "▲ WINNING" },
+          { w: 66, label: "▲ WINNING" },
+          { w: 61, label: "▲ WINNING" },
+          { w: 74, label: "▲ WINNING" },
+          { w: 82, label: "▲ WINNING" }
+        ];
+        function later(fn, ms) { timers.push(setTimeout(fn, reduced ? 0 : ms)); }
+        function setStage(name) {
+          var stages = document.querySelectorAll(".stage");
+          var order = ["scan", "reveal", "sealed", "checkpoints", "settled"];
+          var idx = order.indexOf(name);
+          stages.forEach(function (el) {
+            var i = order.indexOf(el.getAttribute("data-stage"));
+            el.classList.toggle("on", i === idx);
+            el.classList.toggle("done", i < idx);
+          });
+        }
+        function line(html) {
+          var div = document.createElement("div");
+          div.innerHTML = html;
+          log.appendChild(div);
+        }
+        function reset() {
+          timers.forEach(clearTimeout); timers = [];
+          log.innerHTML = "";
+          banner.classList.remove("show");
+          pill.classList.remove("is-sealing");
+          pill.style.opacity = "0.35";
+          call.classList.remove("is-reveal");
+          document.querySelectorAll(".cp-row").forEach(function (row) {
+            row.classList.add("pending");
+            row.querySelector("i").style.width = "0%";
+            row.querySelector(".cp-w").textContent = "—";
+          });
+        }
+        function play() {
+          reset();
+          setStage("scan");
+          line('<span class="t">[00:00]</span> WINDOW OPEN — scanning BTC momentum 1m / 5m / 15m…');
+          later(function () { line('<span class="t">[01:10]</span> Timeframes aligning — Kalshi implied 62¢ YES, model agrees.'); }, 900);
+          later(function () {
+            setStage("reveal");
+            call.classList.add("is-reveal");
+            line('<span class="t">[02:14]</span> <span class="g">CALL REVEALED — ▲ UP</span> · confidence 81% · entry 62¢ YES');
+          }, 1900);
+          later(function () {
+            setStage("sealed");
+            pill.style.opacity = "1";
+            pill.classList.add("is-sealing");
+            var marker = document.getElementById("sealedMarker");
+            if (marker) { marker.style.opacity = "0.2"; setTimeout(function () { marker.style.opacity = "1"; }, reduced ? 0 : 180); }
+            line('<span class="t">[02:14]</span> <span class="gold">◆ SEALED — marker stamped on the chart. This call cannot change now.</span>');
+          }, 2900);
+          later(function () {
+            setStage("checkpoints");
+            line('<span class="t">[02:15]</span> Holding to settlement — checkpoint meters live:');
+            cps.forEach(function (cp, i) {
+              later(function () {
+                var row = document.querySelector('.cp-row[data-cp="' + i + '"]');
+                if (!row) return;
+                row.classList.remove("pending");
+                row.querySelector("i").style.width = cp.w + "%";
+                row.querySelector(".cp-w").textContent = cp.label;
+                var left = [13, 10, 7, 5, 3][i];
+                line('<span class="t">[' + (15 - left) + ':00]</span> Checkpoint · ' + left + ' min left — <span class="g">' + cp.label + '</span> · BTC above price to beat');
+              }, 700 * (i + 1));
+            });
+          }, 3900);
+          later(function () {
+            setStage("settled");
+            banner.classList.add("show");
+            line('<span class="t">[15:00]</span> <span class="g">SETTLEMENT REVEAL — WIN</span> · settled YES (Kalshi official) · streak counter ticks up');
+          }, 8200);
+        }
+        if (btn) btn.addEventListener("click", play);
+        // Start the replay once when the dashboard first scrolls into view; fall back to immediate.
+        if ("IntersectionObserver" in window && !reduced) {
+          var seen = false;
+          var obs = new IntersectionObserver(function (entries) {
+            if (entries[0].isIntersecting && !seen) { seen = true; play(); obs.disconnect(); }
+          }, { threshold: 0.25 });
+          var target = document.getElementById("dashboard");
+          if (target) obs.observe(target); else play();
+          setTimeout(function () { if (!seen) { seen = true; play(); } }, 3500);
+        } else { play(); }
+      })();
+    </script>
+  </body>
+</html>
